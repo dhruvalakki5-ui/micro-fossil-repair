@@ -6,16 +6,19 @@ import os
 import plotly.graph_objects as go
 
 st.title("Micro-Fossil 3D Surface Repair Tool")
-st.markdown("Upload a 3D point cloud file (`.xyz` or `.ply`) to simulate and repair damage!")
+st.markdown("Upload a 3D point cloud file to simulate and repair damage!")
 
 # Sidebar color picker for users to choose their own mesh color
 st.sidebar.header("Viewer Customization")
 user_mesh_color = st.sidebar.color_picker("Choose Mesh Color", "#d4a373")
 
-uploaded_file = st.file_uploader("Choose a point cloud file", type=["xyz", "ply"])
+# Removed strict type restriction to allow any valid point cloud file format
+uploaded_file = st.file_uploader("Choose a point cloud file")
 
 if uploaded_file is not None:
-    file_extension = uploaded_file.name.split('.')[-1]
+    file_name = uploaded_file.name
+    file_extension = file_name.split('.')[-1] if '.' in file_name else 'ply'
+    
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
         tmp_path = tmp_file.name
@@ -53,7 +56,7 @@ if uploaded_file is not None:
                     i=triangles[:, 0],
                     j=triangles[:, 1],
                     k=triangles[:, 2],
-                    color=user_mesh_color,    # Uses the color picked by the user!
+                    color=user_mesh_color,
                     opacity=0.9,
                     lighting=dict(
                         ambient=0.4,
