@@ -8,6 +8,10 @@ import plotly.graph_objects as go
 st.title("Micro-Fossil 3D Surface Repair Tool")
 st.markdown("Upload a 3D point cloud file (`.xyz` or `.ply`) to simulate and repair damage!")
 
+# Sidebar color picker for users to choose their own mesh color
+st.sidebar.header("Viewer Customization")
+user_mesh_color = st.sidebar.color_picker("Choose Mesh Color", "#d4a373")
+
 uploaded_file = st.file_uploader("Choose a point cloud file", type=["xyz", "ply"])
 
 if uploaded_file is not None:
@@ -36,7 +40,6 @@ if uploaded_file is not None:
         st.success("Reconstruction complete!")
         st.write(f"Generated mesh with {len(mesh.vertices)} vertices and {len(mesh.triangles)} triangles.")
         
-        # Extract vertices and triangles for Plotly 3D rendering
         vertices = np.asarray(mesh.vertices)
         triangles = np.asarray(mesh.triangles)
         
@@ -50,9 +53,19 @@ if uploaded_file is not None:
                     i=triangles[:, 0],
                     j=triangles[:, 1],
                     k=triangles[:, 2],
-                    color='lightblue',
-                    opacity=0.8,
-                    lighting=dict(ambient=0.5, diffuse=0.8, specular=0.2)
+                    color=user_mesh_color,    # Uses the color picked by the user!
+                    opacity=0.9,
+                    lighting=dict(
+                        ambient=0.4,
+                        diffuse=0.8,
+                        specular=0.5,
+                        roughness=0.5
+                    ),
+                    lightposition=dict(
+                        x=100,
+                        y=200,
+                        z=300
+                    )
                 )
             ])
             fig.update_layout(
@@ -66,7 +79,6 @@ if uploaded_file is not None:
             )
             st.plotly_chart(fig, use_container_width=True)
         
-        # Save mesh to temporary file for download
         output_mesh_path = tempfile.NamedTemporaryFile(delete=False, suffix=".ply").name
         o3d.io.write_triangle_mesh(output_mesh_path, mesh)
         
