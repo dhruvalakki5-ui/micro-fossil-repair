@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 import tempfile
 import os
-from streamlit_stl import st_stl
+import plotly.graph_objects as go
 
 st.title("Micro-Fossil 3D Surface Repair Tool")
 st.markdown("Upload a 3D point cloud file (`.xyz` or `.ply`) to simulate and repair damage!")
@@ -36,24 +36,50 @@ if uploaded_file is not None:
         st.success("Reconstruction complete!")
         st.write(f"Generated mesh with {len(mesh.vertices)} vertices and {len(mesh.triangles)} triangles.")
         
-        # Save mesh as STL for browser rendering
-        stl_path = tempfile.NamedTemporaryFile(delete=False, suffix=".stl").name
-        o3d.io.write_triangle_mesh(stl_path, mesh)
+        # Extract vertices and triangles for Plotly 3D rendering
+        vertices = np.asarray(mesh.vertices)
+        triangles = np.asarray(mesh.triangles)
         
-        st.subheader("Interactive 3D Mesh Viewer")
-        st_stl(stl_path, height=400)
+        if len(vertices) > 0 and len(triangles) > 0:
+            st.subheader("Interactive 3D Mesh Viewer")
+            fig = go.Figure(data=[
+                go.Mesh3d(
+                    x=vertices[:, 0],
+                    y=vertices[:, 1],
+                    z=vertices[:, 2],
+                    i=triangles[:, 0],
+                    j=triangles[:, 1],
+                    k=triangles[:, 2],
+                    color='lightblue',
+                    opacity=0.8,
+                    lighting=dict(ambient=0.5, diffuse=0.8, specular=0.2)
+                )
+            ])
+            fig.update_layout(
+                scene=dict(
+                    xaxis_title='X',
+                    yaxis_title='Y',
+                    zaxis_title='Z'
+                ),
+                margin=dict(l=0, r=0, b=0, t=0),
+                height=500
+            )
+            st.plotly_chart(fig, use_container_width=True)
         
-        # Download button
-        with open(stl_path, "rb") as f:
+        # Save mesh to temporary file for download
+        output_mesh_path = tempfile.NamedTemporaryFile(delete=False, suffix=".ply").name
+        o3d.io.write_triangle_mesh(output_mesh_path, mesh)
+        
+        with open(output_mesh_path, "rb") as f:
             st.download_button(
-                label="📥 Download Repaired 3D Mesh (.stl)",
+                label="📥 Download Repaired 3D Mesh (.ply)",
                 data=f,
-                file_name="repaired_fossil_mesh.stl",
+                file_name="repaired_fossil_mesh.ply",
                 mime="application/octet-stream"
             )
             
-        if os.path.exists(stl_path):
-            os.remove(stl_path)
+        if os.path.exists(output_mesh_path):
+            os.remove(output_mesh_path)
         
     except Exception as e:
         st.error(f"An error occurred during processing: {e}")
