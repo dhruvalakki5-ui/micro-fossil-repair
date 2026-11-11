@@ -6,13 +6,17 @@ import os
 import plotly.graph_objects as go
 
 st.title("Micro-Fossil 3D Surface Repair Tool")
-st.markdown("Upload a 3D point cloud file to simulate and repair damage!")
+st.markdown("Upload a 3D point cloud file, simulate damage (holes), and repair the mesh!")
 
-# Sidebar color picker for users to choose their own mesh color
+# Sidebar color picker and damage simulation controls
 st.sidebar.header("Viewer Customization")
 user_mesh_color = st.sidebar.color_picker("Choose Mesh Color", "#d4a373")
 
-# Removed strict type restriction to allow any valid point cloud file format
+st.sidebar.header("Damage Simulation")
+simulate_damage = st.sidebar.checkbox("Punch Hole in Point Cloud", value=False)
+hole_radius = st.sidebar.slider("Hole Radius", min_value=1.0, max_value=50.0, value=10.0, step=1.0)
+
+# File uploader allowing any valid point cloud format
 uploaded_file = st.file_uploader("Choose a point cloud file")
 
 if uploaded_file is not None:
@@ -26,9 +30,20 @@ if uploaded_file is not None:
     try:
         st.write("Loading point cloud...")
         pcd = o3d.io.read_point_cloud(tmp_path)
+        st.write(f"Original point cloud loaded with {len(pcd.points)} points.")
         
-        st.write(f"Point cloud loaded with {len(pcd.points)} points.")
-        
+        # Apply damage simulation if toggled on in the sidebar
+        if simulate_damage:
+            st.write("Simulating surface damage (cutting a hole)...")
+            points = np.asarray(pcd.points)
+            center = pcd.get_center()
+            distances = np.linalg.norm(points - center, axis=1)
+            
+            # Filter out points within the slider's radius
+            mask = distances > hole_radius
+            pcd.points = o3d.utility.Vector3dVector(points[mask])
+            st.warning(f"Damage applied! Point count reduced to {len(pcd.points)} points (hole created).")
+
         st.write("Estimating normals...")
         pcd.estimate_normals(
             search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=2.0, max_nn=30)
